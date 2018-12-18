@@ -5653,7 +5653,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.2";
+string __crimbo2018_version = "1.0.3";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5833,6 +5833,7 @@ void main()
 			{
 				if (l.environment == "underwater") continue;
 				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow] contains l) continue;
+				if (l.parent == "Clan Basement") continue;
 				if (!l.locationAvailable()) continue;
 				
 				if (finished_locations[l]) continue;
