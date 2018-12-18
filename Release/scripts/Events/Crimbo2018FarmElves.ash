@@ -5653,7 +5653,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.1";
+string __crimbo2018_version = "1.0.2";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5811,12 +5811,12 @@ void main()
 		}
 		
 		location chosen_location = $location[none];
-		foreach s in $skills[musk of the moose] //' Carlweather's Cantata of Confrontation,
+		foreach s in $skills[musk of the moose,Carlweather's Cantata of Confrontation] //'
 		{
-			//we don't support carlweather because counting songs is effort, cast it yourself if you like
 			if (!s.have_skill()) continue;
 			if (s.to_effect().have_effect() > 0) continue;
-			use_skill(1, s);
+			boolean ignore = cli_execute("cast " + s);
+			//use_skill(1, s);
 		}
 		if ($effect[beaten up].have_effect() > 0) //this is so imperfect
 		{
