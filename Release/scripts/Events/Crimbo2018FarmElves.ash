@@ -5662,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.5";
+string __crimbo2018_version = "1.0.6";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5791,7 +5791,8 @@ void main()
 		location_average_attack[l] = average_attack;
 	}
 	ArchivedEquipment ae = ArchiveEquipment();
-		
+	
+	int noncombats_in_a_row = 0;
 	while (my_adventures() > 0)
 	{
 		
@@ -5843,8 +5844,8 @@ void main()
 			foreach l in $locations[]
 			{
 				if (l.environment == "underwater") continue;
-				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow] contains l) continue;
-				if ($locations[the old landfill,the haunted bedroom] contains l) continue;
+				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow,The Shore\, Inc. Travel Agency] contains l) continue;
+				//if ($locations[the old landfill] contains l) continue;
 				if (l.parent == "Clan Basement") continue;
 				if (!l.locationAvailable()) continue;
 				
@@ -5914,6 +5915,11 @@ void main()
 		}
 		print_html("Chose " + chosen_location);
 		
+		if ($locations[Pandamonium,Pandamonium Slums,The Laugh Floor,Infernal Rackets Backstage] contains chosen_location && get_property("questM10Azazel") == "unstarted")
+		{
+			visit_url("pandamonium.php");
+		}
+		
 		if (equip_voting_sticker && $item[&quot;I Voted!&quot; sticker].equipped_amount() == 0)
 		{
 			equip($slot[acc3], $item[&quot;I Voted!&quot; sticker]);
@@ -5923,14 +5929,36 @@ void main()
 		if (my_mp() < 32 && my_maxmp() >= 32)
 			restore_mp(32);
 		if (my_familiar() != $familiar[yule hound]) abort("yule hound missing");
+		
+		
+		buffer last_combat_text = run_combat();
+		monster last_monster_saved = last_monster();
 		adv1(chosen_location, -1, "");
 		
 		buffer combat_text = run_combat();
+		boolean was_noncombat = (get_property("lastEncounter").to_monster() != last_monster());
+		if (!was_noncombat)
+			was_noncombat = (last_combat_text == combat_text);
 		if (chosen_location == $location[The Haunted Bedroom])
 		{
 			visit_url("choice.php");
 			run_turn();
 		}
+		if (was_noncombat)
+			noncombats_in_a_row += 1;
+		else
+			noncombats_in_a_row = 0;
+		if (noncombats_in_a_row >= 20)
+		{
+			print("We just had twenty NCs in a row... this area is probably bugged?", "red");
+			break;
+		}
+		if (was_noncombat && last_monster_saved != last_monster())
+		{
+			print("Internal error: It says it was a non-combat, but, the monster changed. Stopping.", "red");
+			break;
+		}
+		
 		
 		boolean matches_searching_text = false;
 		boolean matches_no_elf_text = false;
@@ -5988,13 +6016,14 @@ void main()
 		}
 		
 		print("Elf Matches: " + matches_searching_text + "/" + matches_no_elf_text + "/" + matches_elf_image + "/" + matches_generic_text + "/" + matches_faint_text);
-		if (get_property("lastEncounter").to_monster() != last_monster())
+		if (was_noncombat)
 		{
 			print("Noncombat");
 		}
 		else if (!combat_text.contains_text("WINWINWIN"))
 		{
-			print("Not a won combat.");
+			print("Stopping, we didn't win a combat.");
+			return;
 		}
 		else if (matches_no_elf_text || matches_elf_image)
 		{
