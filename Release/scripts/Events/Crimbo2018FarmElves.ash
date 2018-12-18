@@ -5067,35 +5067,6 @@ void locationAvailableResetCache()
 }
 
 
-void locationAvailableRunDiagnostics()
-{
-	location [string][int] unknown_locations_by_zone;
-	
-	foreach loc in $locations[]
-	{
-		Error able_to_find;
-		locationAvailable(loc, able_to_find);
-		if (!able_to_find.was_error)
-			continue;
-		if (!(unknown_locations_by_zone contains (loc.zone)))
-			unknown_locations_by_zone[loc.zone] = listMakeBlankLocation();
-		unknown_locations_by_zone[loc.zone].listAppend(loc);
-	}
-	if (unknown_locations_by_zone.count() > 0)
-	{
-		print_html("Unknown locations in location availability tester:");
-		foreach zone in unknown_locations_by_zone
-		{
-			print(zone + ":");
-			foreach key in unknown_locations_by_zone[zone]
-			{
-				location loc = unknown_locations_by_zone[zone][key];
-				print_html("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + loc);
-			}
-		}
-	}
-}
-
 
 string [location] LAConvertLocationLookupToLocations(string [string] lookup_map)
 {
@@ -5532,6 +5503,44 @@ string getClickableURLForLocationIfAvailable(location l)
         return "";
 }
 
+
+
+void locationAvailableRunDiagnostics()
+{
+    location [string][int] unknown_locations_by_zone;
+    
+    foreach loc in $locations[]
+    {
+        Error able_to_find;
+        locationAvailable(loc, able_to_find);
+        if (!able_to_find.was_error)
+            continue;
+        if (!(unknown_locations_by_zone contains (loc.zone)))
+            unknown_locations_by_zone[loc.zone] = listMakeBlankLocation();
+        unknown_locations_by_zone[loc.zone].listAppend(loc);
+    }
+    if (unknown_locations_by_zone.count() > 0)
+    {
+        print_html("Unknown locations in location availability tester:");
+        foreach zone in unknown_locations_by_zone
+        {
+            print(zone + ":");
+            foreach key in unknown_locations_by_zone[zone]
+            {
+                location loc = unknown_locations_by_zone[zone][key];
+                print_html("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + loc);
+            }
+        }
+    }
+    /*print_html("<strong>Missing URLs:</strong>");
+    foreach loc in $locations[]
+    {
+    	if (loc.parent == "Removed") continue;
+    	if (loc.getClickableURLForLocation() == "")
+        	print_html(loc.parent + ": " + loc.zone + ": " + loc);
+    }*/
+}
+
 /*void main()
 {
     locationAvailableRunDiagnostics();
@@ -5653,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.3";
+string __crimbo2018_version = "1.0.4";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5771,6 +5780,8 @@ void main()
 	foreach l in $locations[]
 	{
 		starting_nc_rates[l] = l.appearance_rates()[$monster[none]];
+		if (starting_nc_rates[l] < 0 && l.to_string().contains_text("The Haunted "))
+			starting_nc_rates[l] = 0.0;
 		float average_attack = 0.0;
 		int average_attack_count = 0;
 		foreach key, m in l.get_monsters()
@@ -5868,7 +5879,7 @@ void main()
 					location_score += 100.0;
 				if (l == $location[Guano Junction] && elemental_resistance($element[stench]) == 0.0)
 				{
-					location_score += 50.0; //ehh
+					location_score += 90.0; //ehh
 				}
 				if (faint_locations[l])
 					location_score += 50.0; //later
@@ -5904,7 +5915,6 @@ void main()
 		
 		if (equip_voting_sticker && $item[&quot;I Voted!&quot; sticker].equipped_amount() == 0)
 		{
-			//abort("equip");
 			equip($slot[acc3], $item[&quot;I Voted!&quot; sticker]);
 		}
 		if (to_float(my_hp()) / to_float(my_maxhp()) < 0.75)
@@ -5986,7 +5996,6 @@ void main()
 			if (__setting_debug)
 				logprint("CRIMBO2018ELFWON: " + run_combat().entity_encode());
 			finished_locations[chosen_location] = true;
-			saveLocations(finished_locations, "ezandoraCrimbo2018FarmElvesFinishedLocations");
 		}
 		else if (matches_searching_text)
 		{
@@ -5994,7 +6003,6 @@ void main()
 			if (matches_faint_text)
 				print("Though it's faint.");
 			faint_locations[chosen_location] = matches_faint_text;
-			saveLocations(faint_locations, "ezandoraCrimbo2018FarmElvesFaintLocations");
 
 		}
 		else
@@ -6002,6 +6010,8 @@ void main()
 			print("Don't know what to do. Message Ezandora.", "red");
 			break;
 		}
+		saveLocations(finished_locations, "ezandoraCrimbo2018FarmElvesFinishedLocations");
+		saveLocations(faint_locations, "ezandoraCrimbo2018FarmElvesFaintLocations");
 	}
 	RestoreArchivedEquipment(ae);
 	if (!get_property("svnUpdateOnLogin").to_boolean())
