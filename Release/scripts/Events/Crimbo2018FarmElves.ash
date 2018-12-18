@@ -5414,6 +5414,7 @@ static
         lookup_map["The Fungal Nethers"] = "place.php?whichplace=nemesiscave";
         lookup_map["Thugnderdome"] = "gnomes.php";
         lookup_map["The Overgrown Lot"] = "place.php?whichplace=town_wrong";
+        lookup_map["The Canadian Wildlife Preserve"] = "place.php?whichplace=mountains";
         foreach s in $strings[The Hallowed Halls,Shop Class,Chemistry Class,Art Class]
             lookup_map[s] = "place.php?whichplace=KOLHS";
         foreach s in $strings[The Edge of the Swamp,The Dark and Spooky Swamp,The Corpse Bog,The Ruined Wizard Tower,The Wildlife Sanctuarrrrrgh,Swamp Beaver Territory,The Weird Swamp Village]
@@ -5652,8 +5653,16 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0";
+string __crimbo2018_version = "1.0.1";
 /*
+Very faint areas:
+[yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
+[yule hound name] sniffs around and acts like maybe he smells something but doesn't seem real definite about it.
+[yule hound name] sniffs around and maybe catches a trace of elf, but it's a real faint trace.
+[yule hound name] sniffs around and picks up a trail, but it's so faint he doesn't seem real enthused about it.
+[yule hound name] sniffs around and seems like maybe he found a trail, but he has to keep checking to make sure.
+
+
 Searching:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
 [yule hound name] barks and leads you deeper into the area, hot on the trail.
@@ -5702,15 +5711,16 @@ You find an elf trying to dislodge some sleigh bells from the ground with a tiny
 boolean [string] __crimbo2018_elves_searching_text = $strings[acts like he's caught a faint whiff of elf on the breeze\, but can't really place it.,barks and leads you deeper into the area\, hot on the trail.,seems like you're nearly on top of an elf!,there's definitely an elf nearby!,you must be getting close to an elf!,leads you forward with determination\, definitely on the trail of an elf.,there must be an elf super nearby!,is practically running\, you must be really close to an elf!,barks excitedly and sniffs around like there's an elf right here somewhere!,barks excitedly\, and leads you forward.,barks wildly and looks around as though he expects to see an elf right here!,sniffs around and acts like maybe he smells something but doesn't seem real definite about it.,sniffs around and picks up a trail\, but it's so faint he doesn't seem real enthused about it.,sniffs around and maybe catches a trace of elf\, but it's a real faint trace.,sniffs around and seems like maybe he found a trail\, but he has to keep checking to make sure.]; //'
 boolean [string] __crimbo2018_elves_no_elf_text = $strings[sniffs around for a bit\, then looks up at you and gives you the doggy version of a shrug.,sniffs around a bit\, then sits down and does one of those big dog yawns.,sniffs around for a while\, but doesn't seem to pick up anything,and finds a half a hot dog someone dropped.,sniffs around and then barks a bark that sounds like a bark version of]; //'
 boolean [string] __crimbo2018_elves_generic_familiar_text = $strings[barks a few bars of ,decks the halls with boughs of holly.,His breath smells like peppermint!,licks your nose under the mistletoe.,rolls around and makes a puppy-shaped snow angel.,frolics in the snow; watching cute animals frolic in the snow is the real true meaning of Crimbo.];
+boolean [string] __crimbo2018_elves_faint_text = $strings[acts like he's caught a faint whiff of elf on the breeze\, but can't really place it.,sniffs around and acts like maybe he smells something but doesn't seem real definite about it.,sniffs around and maybe catches a trace of elf\, but it's a real faint trace.,sniffs around and picks up a trail\, but it's so faint he doesn't seem real enthused about it.,sniffs around and seems like maybe he found a trail\, but he has to keep checking to make sure.];
 
-boolean [location] loadLocationsAlreadyFinished()
+boolean [location] loadLocations(string relevant_property_name)
 {
 	boolean [location] finished_locations;
 	if (get_property("ezandoraCrimbo2018FarmElvesLastAscension").to_int() != my_ascensions())
 		return finished_locations;
 	//if (get_property("ezandoraCrimbo2018FarmElvesLastDaycount").to_int() != my_daycount())
 		//return finished_locations;
-	foreach key, value in get_property("ezandoraCrimbo2018FarmElvesFinishedLocations").split_string("•")
+	foreach key, value in get_property(relevant_property_name).split_string("•")
 	{
 		if (value == "") continue;
 		if (!is_integer(value)) continue;
@@ -5721,18 +5731,19 @@ boolean [location] loadLocationsAlreadyFinished()
 	return finished_locations;
 }
 
-void saveLocationsAlreadyFinished(boolean [location] finished_locations)
+void saveLocations(boolean [location] finished_locations, string relevant_property_name)
 {
 	buffer out;
 	foreach l in finished_locations
 	{
+		if (!finished_locations[l]) continue;
 		if (out.length() != 0)
 			out.append("•");
 		out.append(l.snarfblatForLocation());
 	}
 	set_property("ezandoraCrimbo2018FarmElvesLastAscension", my_ascensions());
 	set_property("ezandoraCrimbo2018FarmElvesLastDaycount", my_daycount()); //in case that changes
-	set_property("ezandoraCrimbo2018FarmElvesFinishedLocations", out);
+	set_property(relevant_property_name, out);
 }
 
 void main()
@@ -5751,7 +5762,8 @@ void main()
 	}
 	
 	
-	boolean [location] finished_locations = loadLocationsAlreadyFinished();
+	boolean [location] finished_locations = loadLocations("ezandoraCrimbo2018FarmElvesFinishedLocations");
+	boolean [location] faint_locations = loadLocations("ezandoraCrimbo2018FarmElvesFaintLocations");
 	use_familiar($familiar[yule hound]);
 	
 	float [location] starting_nc_rates;
@@ -5857,6 +5869,8 @@ void main()
 				{
 					location_score += 50.0; //ehh
 				}
+				if (faint_locations[l])
+					location_score += 50.0; //later
 					
 				location_score *= 1000.0;
 				
@@ -5905,6 +5919,7 @@ void main()
 		boolean matches_no_elf_text = false;
 		boolean matches_elf_image = false;
 		boolean matches_generic_text = false;
+		boolean matches_faint_text = false;
 		foreach s in __crimbo2018_elves_searching_text
 		{
 			if (combat_text.contains_text(s))
@@ -5946,7 +5961,16 @@ void main()
 				break;
 			}
 		}
-		print("Elf Matches: " + matches_searching_text + "/" + matches_no_elf_text + "/" + matches_elf_image + "/" + matches_generic_text);
+		foreach s in __crimbo2018_elves_faint_text
+		{
+			if (combat_text.contains_text(s))
+			{
+				matches_faint_text = true;
+				break;
+			}
+		}
+		
+		print("Elf Matches: " + matches_searching_text + "/" + matches_no_elf_text + "/" + matches_elf_image + "/" + matches_generic_text + "/" + matches_faint_text);
 		if (get_property("lastEncounter").to_monster() != last_monster())
 		{
 			print("Noncombat");
@@ -5961,11 +5985,16 @@ void main()
 			if (__setting_debug)
 				logprint("CRIMBO2018ELFWON: " + run_combat().entity_encode());
 			finished_locations[chosen_location] = true;
-			saveLocationsAlreadyFinished(finished_locations);
+			saveLocations(finished_locations, "ezandoraCrimbo2018FarmElvesFinishedLocations");
 		}
 		else if (matches_searching_text)
 		{
 			print("Hot on the trail of an elf.");
+			if (matches_faint_text)
+				print("Though it's faint.");
+			faint_locations[chosen_location] = matches_faint_text;
+			saveLocations(faint_locations, "ezandoraCrimbo2018FarmElvesFaintLocations");
+
 		}
 		else
 		{
