@@ -5662,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.7";
+string __crimbo2018_version = "1.0.8";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5920,6 +5920,13 @@ void main()
 			visit_url("pandamonium.php");
 		}
 		
+		int bowling_balls_to_uncloset = 0;
+		if (chosen_location == $location[The Hidden Bowling Alley] && $item[bowling ball].item_amount() > 0)
+		{
+			bowling_balls_to_uncloset = $item[bowling ball].item_amount();
+			cli_execute("closet put * bowling ball");
+		}
+		
 		if (equip_voting_sticker && $item[&quot;I Voted!&quot; sticker].equipped_amount() == 0)
 		{
 			equip($slot[acc3], $item[&quot;I Voted!&quot; sticker]);
@@ -5943,6 +5950,12 @@ void main()
 		{
 			visit_url("choice.php");
 			run_turn();
+		}
+		
+		if (bowling_balls_to_uncloset > 0)
+		{
+			cli_execute("closet take " + bowling_balls_to_uncloset + " bowling ball");
+			bowling_balls_to_uncloset = 0;
 		}
 		if (was_noncombat)
 			noncombats_in_a_row += 1;
