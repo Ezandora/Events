@@ -5662,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.8";
+string __crimbo2018_version = "1.0.9";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5927,6 +5927,10 @@ void main()
 			cli_execute("closet put * bowling ball");
 		}
 		
+		if (chosen_location == $location[The Secret Government Laboratory] && $item[Personal Ventilation Unit].available_amount() > 0 && $item[Personal Ventilation Unit].equipped_amount() == 0)
+		{
+			equip($slot[acc2], $item[Personal Ventilation Unit]);
+		}
 		if (equip_voting_sticker && $item[&quot;I Voted!&quot; sticker].equipped_amount() == 0)
 		{
 			equip($slot[acc3], $item[&quot;I Voted!&quot; sticker]);
