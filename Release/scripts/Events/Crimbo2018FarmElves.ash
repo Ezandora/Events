@@ -5662,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.6";
+string __crimbo2018_version = "1.0.7";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5937,7 +5937,7 @@ void main()
 		
 		buffer combat_text = run_combat();
 		boolean was_noncombat = (get_property("lastEncounter").to_monster() != last_monster());
-		if (!was_noncombat)
+		if (was_noncombat)
 			was_noncombat = (last_combat_text == combat_text);
 		if (chosen_location == $location[The Haunted Bedroom])
 		{
