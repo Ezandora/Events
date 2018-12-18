@@ -5662,7 +5662,7 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.4";
+string __crimbo2018_version = "1.0.5";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5844,6 +5844,7 @@ void main()
 			{
 				if (l.environment == "underwater") continue;
 				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow] contains l) continue;
+				if ($locations[the old landfill,the haunted bedroom] contains l) continue;
 				if (l.parent == "Clan Basement") continue;
 				if (!l.locationAvailable()) continue;
 				
@@ -5925,6 +5926,11 @@ void main()
 		adv1(chosen_location, -1, "");
 		
 		buffer combat_text = run_combat();
+		if (chosen_location == $location[The Haunted Bedroom])
+		{
+			visit_url("choice.php");
+			run_turn();
+		}
 		
 		boolean matches_searching_text = false;
 		boolean matches_no_elf_text = false;
@@ -5994,7 +6000,7 @@ void main()
 		{
 			print("No more elf in " + chosen_location);
 			if (__setting_debug)
-				logprint("CRIMBO2018ELFWON: " + run_combat().entity_encode());
+				logprint("CRIMBO2018ELFWON: " + combat_text.entity_encode());
 			finished_locations[chosen_location] = true;
 		}
 		else if (matches_searching_text)
@@ -6010,6 +6016,7 @@ void main()
 			print("Don't know what to do. Message Ezandora.", "red");
 			break;
 		}
+		//Must be updated simultaneously because they share a property and I didn't care enough to
 		saveLocations(finished_locations, "ezandoraCrimbo2018FarmElvesFinishedLocations");
 		saveLocations(faint_locations, "ezandoraCrimbo2018FarmElvesFaintLocations");
 	}
