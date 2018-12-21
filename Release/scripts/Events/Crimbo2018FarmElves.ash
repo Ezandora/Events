@@ -1,5 +1,5 @@
 //Maybe try running this command before this script:
-//maximize 1.0 moxie 20.0 combat rate -tie +equip mafia thumb ring
+//maximize 1.0 moxie 20.0 combat rate -tie +equip mafia thumb ring +equip pantsgiving
 
 //Library for checking if any given location is unlocked.
 //Similar to canadv.ash, except there's no code for using items and no URLs are (currently) visited. This limits our accuracy.
@@ -4851,7 +4851,7 @@ boolean locationAvailablePrivateCheck(location loc, Error able_to_find)
         case $location[The dungeons of doom]:
             return my_basestat(my_primestat()) >= 45 && get_property_ascension("lastPlusSignUnlock");
         case $location[The "Fun" House]:
-            return questPropertyPastInternalStepNumber("questG04Nemesis", 2); //FIXME is 2 correct?
+            return questPropertyPastInternalStepNumber("questG04Nemesis", 6); //FIXME 6 is wrong, but I don't know the right value
         case $location[The Dark Neck of the Woods]:
         case $location[The Dark Heart of the Woods]:
         case $location[The Dark Elbow of the Woods]:
@@ -5662,7 +5662,8 @@ void RestoreArchivedEquipment()
 
 boolean __setting_infinitely_farm_elves = get_property("ezandoraCrimbo2018FarmElvesInfiniteFarmElves").to_boolean(); //well, if you really want...
 boolean __setting_debug = true && (my_id() == 1557284); //this just logs some combat text
-string __crimbo2018_version = "1.0.9";
+boolean __setting_run_maximise = my_id() == 1557284;
+string __crimbo2018_version = "1.0.10";
 /*
 Very faint areas:
 [yule hound name] acts like he's caught a faint whiff of elf on the breeze, but can't really place it.
@@ -5774,7 +5775,8 @@ void main()
 	boolean [location] finished_locations = loadLocations("ezandoraCrimbo2018FarmElvesFinishedLocations");
 	boolean [location] faint_locations = loadLocations("ezandoraCrimbo2018FarmElvesFaintLocations");
 	use_familiar($familiar[yule hound]);
-	
+	if (__setting_run_maximise)
+		cli_execute("maximize 1.0 moxie 20.0 combat rate -tie +equip mafia thumb ring +equip pantsgiving");
 	float [location] starting_nc_rates;
 	float [location] location_average_attack;
 	foreach l in $locations[]
@@ -5844,7 +5846,7 @@ void main()
 			foreach l in $locations[]
 			{
 				if (l.environment == "underwater") continue;
-				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow,The Shore\, Inc. Travel Agency] contains l) continue;
+				if ($locations[The Daily Dungeon,The Primordial Soup,Seaside Megalopolis,Summoning Chamber,The Haiku Dungeon,The Spooky Gravy Burrow,The Shore\, Inc. Travel Agency,The Clumsiness Grove,The Maelstrom of Lovers,The Glacier of Jerks,The Deep Machine Tunnels] contains l) continue;
 				//if ($locations[the old landfill] contains l) continue;
 				if (l.parent == "Clan Basement") continue;
 				if (!l.locationAvailable()) continue;
@@ -5941,10 +5943,18 @@ void main()
 			restore_mp(32);
 		if (my_familiar() != $familiar[yule hound]) abort("yule hound missing");
 		
-		
+		if ($effect[Just the Best Anapests].have_effect() > 0)
+		{
+			cli_execute("shrug Just the Best Anapests");
+		}
+		if ($effect[temporary blindness].have_effect() > 0)
+		{
+			abort("you're blind, try uneffecting it?");
+		}
+		//FIXME try using run_turn() - we don't because I've never used it before, and I don't want to break this script
 		buffer last_combat_text = run_combat();
 		monster last_monster_saved = last_monster();
-		adv1(chosen_location, -1, "");
+		boolean ignore = adv1(chosen_location, -1, "");
 		
 		buffer combat_text = run_combat();
 		boolean was_noncombat = (get_property("lastEncounter").to_monster() != last_monster());
