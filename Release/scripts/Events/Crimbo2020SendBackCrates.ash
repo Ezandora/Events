@@ -1,9 +1,34 @@
-string __send_back_crates_version = "1.0";
+
+/*
+Crimbo2020SendBackCrates.ash
+
+
+Settings:
+
+Run this to always attempt sending back crates, even if we did today. (not a good choice)
+set ezandoraCrimbo2020DoNotIgnoreAlreadySentBackKmails=true
+
+Run this to delete kmails sent to us. Warning: dangerous.
+set ezandoraCrimbo2020DeleteKmails=true
+
+Run this to save kmails sent to us. Might be a nightmare.
+set ezandoraCrimbo2020SaveKmails=true
+*/
+
+
+
+string __send_back_crates_version = "1.1";
 
 boolean [string] __already_processed_kmails;
 
 
+//If you try to respond to a kmail and you already sent for today, just ignore it.
+//This is 
+boolean __setting_ignore_already_sent_back_kmails = !get_property("ezandoraCrimbo2020DoNotIgnoreAlreadySentBackKmails").to_boolean();
+boolean __setting_extremely_dangerous_delete_responded_to_kmails = get_property("ezandoraCrimbo2020DeleteKmails").to_boolean(); //do not enable unless you trust the script
+boolean __setting_save_responded_to_kmails = get_property("ezandoraCrimbo2020SaveKmails").to_boolean();
 int __setting_kmail_load_limit = 100;
+
 
 string __processed_kmails_datafile = "ezandora_crimbo2020_send_back_crates_" + my_id() + ".txt";
 void loadProcessedKMails()
@@ -51,6 +76,19 @@ KMail [int] KMailGetAllKMails()
 	return kmails;
 }
 
+void KMailSaveKMail(KMail k)
+{
+	string command = "messages.php?the_action=save&box=Inbox";
+	command += "&sel" + k.id + "=on";
+	visit_url(command);
+}
+void KMailDeleteKMail(KMail k)
+{
+	string command = "messages.php?the_action=delete&box=Inbox";
+	command += "&sel" + k.id + "=on";
+	visit_url(command);
+}
+
 
 
 boolean stringHasAllSubstrings(string v, string [int] substrings)
@@ -76,14 +114,17 @@ void main()
 	
 	boolean disable_sending = false;
 	int [string] totals_needed;
+	boolean halt = false;
 	foreach key, k in kmails
 	{
 		if (k.fromid <= 0) continue;
-		if (__already_processed_kmails[k.id]) continue;
-		if (k.fromname == "missfishie" && false)
+		if (__already_processed_kmails[k.id])
 		{
-			print_html(k.fromname + " " + k.fromid);
-			print_html(k.message.entity_encode());
+			if (__setting_extremely_dangerous_delete_responded_to_kmails)
+				KMailDeleteKMail(k);
+			if (__setting_save_responded_to_kmails)
+				KMailSaveKMail(k);
+			continue;
 		}
 		
 		int whichitem = -1;
@@ -138,20 +179,34 @@ void main()
 		else if (send_results.contains_text("You already sent that player a crate"))
 		{
 			print("Unable to send to " + k.fromname + ", already sent today.");
-			continue;
+			if (__setting_ignore_already_sent_back_kmails)
+			{
+				__already_processed_kmails[k.id] = true;
+				saveProcessedKMails();
+			}
 		}
 		else
 		{
 			if (my_id() == 1557284)
 				print_html("send_results = " + send_results.entity_encode());
 			print("Unknown error sending shipment to " + k.fromname + ", halting.");
-			break;
+			halt = true;
 		}
 		if (success)
 		{
+			if (__setting_extremely_dangerous_delete_responded_to_kmails)
+				KMailDeleteKMail(k);
+			if (__setting_save_responded_to_kmails)
+				KMailSaveKMail(k);
 			__already_processed_kmails[k.id] = true;
 			saveProcessedKMails();
 		}
+		else
+		{
+			buffer results_3 = visit_url("choice.php?whichchoice=" + whichchoice + "&option=1&who=");
+		}
+		
+		if (halt) break;
 	}
 	
 	string line;
