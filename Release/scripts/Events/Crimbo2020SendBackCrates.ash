@@ -17,7 +17,7 @@ set ezandoraCrimbo2020SaveKmails=true
 
 
 
-string __send_back_crates_version = "1.1";
+string __send_back_crates_version = "1.1.1";
 
 boolean [string] __already_processed_kmails;
 
@@ -112,7 +112,7 @@ void main()
 	string [int] candy_shipment_strings = {"has sent you a shipment of candy!<center>", "onClick='descitem(442893531)' >", "You acquire <b>50 boxes of donated candy"};
 	
 	
-	boolean disable_sending = false;
+	boolean [string] crates_already_out_of;
 	int [string] totals_needed;
 	boolean halt = false;
 	foreach key, k in kmails
@@ -154,7 +154,7 @@ void main()
 		else
 			continue;
 		if (whichitem == -1 || whichchoice == -1) continue;
-		if (disable_sending)
+		if (crates_already_out_of[shipment_item_name])
 		{
 			totals_needed[shipment_item_name] += 1;
 			continue;
@@ -164,8 +164,8 @@ void main()
 		if (!use_page_results.contains_text("Send a shipment of government"))
 		{
 			print("We cannot respond right now; buy a " + shipment_item_name);
+			crates_already_out_of[shipment_item_name] = true;
 			totals_needed[shipment_item_name] += 1;
-			disable_sending = true;
 			continue;
 		}
 		
