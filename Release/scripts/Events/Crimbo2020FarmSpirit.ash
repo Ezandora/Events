@@ -58,7 +58,7 @@ void RestoreArchivedEquipment()
 }
 
 
-string __farm_spirit_version = "1.0";
+string __farm_spirit_version = "1.0.1";
 
 boolean __setting_disable_automatics = false;
 boolean __setting_one_house_only = false;
@@ -90,6 +90,23 @@ stat getCurrentLargestStat()
 			current_largest_stat = s;
 	}
 	return current_largest_stat;
+}
+
+stat getCurrentLargestStatRatio()
+{
+	stat best_stat_for_rewards = $stat[none];
+	float best_stat_ratio = 0.0;
+	
+	foreach s in $stats[muscle, mysticality, moxie]
+	{
+		float ratio = s.my_buffedstat().to_float() / MAX(100.0, s.my_active_basestat().to_float());
+		if (ratio > best_stat_ratio || best_stat_for_rewards == $stat[none])
+		{
+			best_stat_for_rewards = s;
+			best_stat_ratio = ratio;
+		}
+	}
+	return best_stat_for_rewards;
 }
 
 buffer run_choice_by_text(string page_text, string identifier)
@@ -202,7 +219,7 @@ void prepareForSpiritFirst()
 	}
 	
 	//Hmm...
-	//Just maximise our prime stat.
+	//Just maximise our largest stat. (not primestat, because if they have rhinestones active, we should respond to that)
 	
 	/*float muscle_score = maximize("muscle -tie", 0, 0, false, true);
 	float mysticality_score = maximize("mysticality -tie", 0, 0, false, true);
@@ -212,16 +229,20 @@ void prepareForSpiritFirst()
 	string maximisation_extras;
 	
 	//Need more spading, but for now we'll equip a stat limiter for 100.
-	foreach it in $items[PARTY HARD T-Shirt, FantasyRealm G. E. M., Personal Ventilation Unit, warbear hoverbelt, Drip harness]
+	boolean ignore = cli_execute("outfit birthday suit"); //starting off with
+	if (my_basestat($stat[muscle]) > 100 || my_basestat($stat[mysticality]) > 100 || my_basestat($stat[moxie]) > 100)
 	{
-		if (it.available_amount() > 0 && it.can_equip())
+		foreach it in $items[PARTY HARD T-Shirt, FantasyRealm G. E. M., Personal Ventilation Unit, warbear hoverbelt, Drip harness]
 		{
-			//+equip doesn't always work but w/e
-			maximisation_extras += " +equip " + it;
-			break;
+			if (it.available_amount() > 0 && it.can_equip())
+			{
+				boolean ignore2 = equip(it);
+				maximisation_extras += " +equip " + it;
+				break;
+			}
 		}
 	}
-	cli_execute("maximize " + my_primestat() + maximisation_extras + " -tie");
+	cli_execute("maximize " + getCurrentLargestStatRatio() + maximisation_extras + " -tie");
 	
 	
 }
@@ -237,7 +258,7 @@ void prepareForSpirit(int houses_left)
 	//string gain_command = "gain 10000000 muscle 10000000 moxie 10000000 mysticality 3 eff " + houses_left + " turns";
 	
 	//Just increase the largest stat:
-	string gain_command = "gain 10000000 " + getCurrentLargestStat() + " 3 eff " + houses_left + " turns silent limited";
+	string gain_command = "gain 10000000 " + getCurrentLargestStatRatio() + " 3 eff " + (houses_left + 1) + " turns silent limited";
 	boolean success = cli_execute(gain_command);
 }
 
@@ -249,6 +270,12 @@ void runHouses()
 	while (breakout > 0)
 	{
 		breakout -= 1;
+		
+		if (my_adventures() == 0)
+		{
+			print("Out of adventures, stopping.");
+			return;
+		}
 		if (house_text.length() == 0)
 			house_text = visit_url("place.php?whichplace=town&action=town_c20spirit");
 		
@@ -309,14 +336,15 @@ void runHouses()
 		string [int] choice_2_choices = {"Ask for food", "Ask for booze", "Ask for candy"};
 		string target_choice = choice_2_choices[random(choice_2_choices.count())];
 		
-		stat current_largest_stat = getCurrentLargestStat();
+		//stat current_largest_stat = getCurrentLargestStat();
+		stat best_stat_for_rewards = getCurrentLargestStatRatio();
 
 		foreach key in choice_2_matches
 		{
 			string consumable_type = choice_2_matches[key][1];
 			stat stat_type = choice_2_matches[key][2].to_stat();
 			//print_html(consumable_type + " matches to " + stat_type);
-			if (stat_type == current_largest_stat)
+			if (stat_type == best_stat_for_rewards)
 			{
 				print_html("Picking " + consumable_type + " for " + stat_type);
 				target_choice = "Ask for " + consumable_type;
