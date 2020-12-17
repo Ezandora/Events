@@ -34,10 +34,22 @@ void runCrate(int whichitem, int whichchoice, string target_player, string crate
 	}
 }
 
-void main(string target_player)
+
+void sendCrate(string target_player)
 {
 	print_html("Sending crates to " + target_player);
 	runCrate(10685,1442, target_player, "government food shipment");
 	runCrate(10686,1443, target_player, "government booze shipment");
 	runCrate(10687,1444, target_player, "government candy shipment");
+}
+
+void main(string target_players)
+{
+	string [int] players = target_players.split_string(",");
+	
+	foreach key, target_player in players
+	{
+		if (target_players == "") continue;
+		sendCrate(target_player);
+	}
 }
