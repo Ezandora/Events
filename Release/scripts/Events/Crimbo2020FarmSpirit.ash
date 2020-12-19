@@ -58,7 +58,7 @@ void RestoreArchivedEquipment()
 }
 
 
-string __farm_spirit_version = "1.0.1";
+string __farm_spirit_version = "1.1";
 
 boolean __setting_disable_automatics = false;
 boolean __setting_one_house_only = false;
@@ -69,6 +69,12 @@ int SPIRIT_CHEER = 2;
 int SPIRIT_CAROLS = 3;
 int SPIRIT_COMMERCE = 4;
 
+boolean mafiaIsPastRevision(int revision_number)
+{
+    if (get_revision() <= 0) //get_revision reports zero in certain cases; assume they're on a recent version
+        return true;
+    return (get_revision() >= revision_number);
+}
 float my_active_basestat(stat s)
 {
 	float v = my_basestat(s);
@@ -107,6 +113,43 @@ stat getCurrentLargestStatRatio()
 		}
 	}
 	return best_stat_for_rewards;
+}
+
+int discoverChoiceIDFromPageText(string page_text)
+{
+	//Same as mafia's:
+	string [int] extraction_patterns;
+	extraction_patterns[extraction_patterns.count()] = "name=['\"]?whichchoice['\"]? value=['\"]?(\\d+)['\"]?";
+	extraction_patterns[extraction_patterns.count()] = "value=['\"]?(\\d+)['\"]? name=['\"]?whichchoice['\"]?";
+	extraction_patterns[extraction_patterns.count()] = "choice.php\\?whichchoice=(\\d+)";
+	foreach key, s in extraction_patterns
+	{
+		string [int, int] matches = page_text.group_string(s);
+		if (matches.count() == 0)
+			continue;
+		string value = matches[0][1];
+		if (!is_integer(value))
+			continue;
+		return value.to_int();
+	}
+	//Try extracting a choice.php: (witchess)
+	
+	string [int][int] generic_matches = page_text.group_string("\"choice.php\\?([^\" ]*)\"");
+	if (generic_matches.count() > 0)
+	{
+		string first_level = generic_matches[0][1];
+		string [int][int] second_level_matches = first_level.group_string("whichchoice=([0-9]*)");
+		if (second_level_matches.count() > 0)
+		{
+			string value = second_level_matches[0][1];
+			if (is_integer(value))
+				return value.to_int();
+		}
+	}
+	
+	if (page_text.contains_text("<b>Hippy Talkin'</b>"))
+		return 798;
+	return -1;
 }
 
 buffer run_choice_by_text(string page_text, string identifier)
@@ -254,18 +297,19 @@ void prepareForSpirit(int houses_left)
 	
 	if (__setting_disable_automatics) return;
 	
-	visit_url("main.php"); //we have to do this to convince mafia we aren't in a choice adventure
+	if (!mafiaIsPastRevision(20573))
+		visit_url("main.php"); //we have to do this to convince mafia we aren't in a choice adventure
 	//string gain_command = "gain 10000000 muscle 10000000 moxie 10000000 mysticality 3 eff " + houses_left + " turns";
 	
-	//Just increase the largest stat:
+	//Just increase the largest stat ratio:
 	string gain_command = "gain 10000000 " + getCurrentLargestStatRatio() + " 3 eff " + (houses_left + 1) + " turns silent limited";
 	boolean success = cli_execute(gain_command);
 }
 
 void runHouses()
 {
-	buffer house_text;
-	int breakout = 100;
+	buffer page_text;
+	int breakout = 120;
 	int coordinates_left = 30;
 	while (breakout > 0)
 	{
@@ -276,88 +320,110 @@ void runHouses()
 			print("Out of adventures, stopping.");
 			return;
 		}
-		if (house_text.length() == 0)
-			house_text = visit_url("place.php?whichplace=town&action=town_c20spirit");
+		if (page_text.length() == 0)
+			page_text = visit_url("place.php?whichplace=town&action=town_c20spirit");
 		
 		
-		string [int][int] coordinate_matches = house_text.group_string("\"hidden\" name=\"p\" value=\"([^\"]*)\">");
-		
-		string target_coordinate = coordinate_matches[0][1];
-		
-		if (coordinate_matches.count() == 0 || target_coordinate == "")
+		int current_choice_id = page_text.discoverChoiceIDFromPageText();
+		if (current_choice_id == 1439)
 		{
-			print_html("No more houses.");
-			break;
-		}
+			string [int][int] coordinate_matches = page_text.group_string("\"hidden\" name=\"p\" value=\"([^\"]*)\">");
 		
-		coordinates_left = coordinate_matches.count();
-		print_html(coordinates_left + " houses left.");
-		prepareForSpirit(coordinates_left);
+			string target_coordinate = coordinate_matches[0][1];
 		
-		
-		//Choice 1:
-		//Share a Random Spirit
-		//Spread Cheer
-		//Sing Carols
-		//Encourage Commerce
-		
-		string selected_choice_1 = "Share a Random Spirit";
-		
-		if (__chosen_spirit == SPIRIT_RANDOM)
-		{
-			selected_choice_1 = "Share a Random Spirit";
-		}
-		else if (__chosen_spirit == SPIRIT_CHEER)
-		{
-			selected_choice_1 = "Spread Cheer";
-		}
-		else if (__chosen_spirit == SPIRIT_CAROLS)
-		{
-			selected_choice_1 = "Sing Carols";
-		}
-		else if (__chosen_spirit == SPIRIT_COMMERCE)
-		{
-			selected_choice_1 = "Encourage Commerce";
-		}
-		
-		
-		buffer choice_1_text = visit_url("choice.php?whichchoice=1439&option=1&p=" + target_coordinate);
-		buffer choice_2_text = choice_1_text.run_choice_by_text(selected_choice_1);
-		
-		//Choice 2:
-		//Ask for food
-		//Ask for booze
-		//Ask for candy.
-		
-		//Choice 2's result gives house text.
-		
-		string [int][int] choice_2_matches = choice_2_text.group_string("\"Ask for ([^\"]*)\"></td><td valign=center><font color=blue><b>\\[Improved by ([^\\]]*)\\]</b>");
-		
-		string [int] choice_2_choices = {"Ask for food", "Ask for booze", "Ask for candy"};
-		string target_choice = choice_2_choices[random(choice_2_choices.count())];
-		
-		//stat current_largest_stat = getCurrentLargestStat();
-		stat best_stat_for_rewards = getCurrentLargestStatRatio();
-
-		foreach key in choice_2_matches
-		{
-			string consumable_type = choice_2_matches[key][1];
-			stat stat_type = choice_2_matches[key][2].to_stat();
-			//print_html(consumable_type + " matches to " + stat_type);
-			if (stat_type == best_stat_for_rewards)
+			if (coordinate_matches.count() == 0 || target_coordinate == "")
 			{
-				print_html("Picking " + consumable_type + " for " + stat_type);
-				target_choice = "Ask for " + consumable_type;
+				print("No more houses.");
+				break;
+			}
+		
+			coordinates_left = coordinate_matches.count();
+			print("");
+			print(coordinates_left + " houses left.");
+			prepareForSpirit(coordinates_left);
+			page_text = visit_url("choice.php?whichchoice=1439&option=1&p=" + target_coordinate);
+		}
+		else if (current_choice_id == 1440)
+		{
+		
+			//Choice 1:
+			//Share a Random Spirit
+			//Spread Cheer
+			//Sing Carols
+			//Encourage Commerce
+		
+			string selected_choice_1 = "Share a Random Spirit";
+		
+			if (__chosen_spirit == SPIRIT_RANDOM)
+			{
+				selected_choice_1 = "Share a Random Spirit";
+			}
+			else if (__chosen_spirit == SPIRIT_CHEER)
+			{
+				selected_choice_1 = "Spread Cheer";
+			}
+			else if (__chosen_spirit == SPIRIT_CAROLS)
+			{
+				selected_choice_1 = "Sing Carols";
+			}
+			else if (__chosen_spirit == SPIRIT_COMMERCE)
+			{
+				selected_choice_1 = "Encourage Commerce";
+			}
+		
+			page_text = page_text.run_choice_by_text(selected_choice_1);
+			if (page_text.length() == 0)
+			{
+				print("Unable to run choice " + selected_choice_1 + ", stopping.", "red");
+				break;
 			}
 		}
+		else if (current_choice_id == 1441)
+		{
+			//Choice 2:
+			//Ask for food
+			//Ask for booze
+			//Ask for candy.
+		
+			//Choice 2's result gives the intro house text.
+		
+			string [int][int] choice_2_matches = page_text.group_string("\"Ask for ([^\"]*)\"></td><td valign=center><font color=blue><b>\\[Improved by ([^\\]]*)\\]</b>");
+		
+			string [int] choice_2_choices = {"Ask for food", "Ask for booze", "Ask for candy"};
+			string target_choice = choice_2_choices[random(choice_2_choices.count())];
+		
+			//stat current_largest_stat = getCurrentLargestStat();
+			stat best_stat_for_rewards = getCurrentLargestStatRatio();
+
+			foreach key in choice_2_matches
+			{
+				string consumable_type = choice_2_matches[key][1];
+				stat stat_type = choice_2_matches[key][2].to_stat();
+				//print_html(consumable_type + " matches to " + stat_type);
+				if (stat_type == best_stat_for_rewards)
+				{
+					print("Picking " + consumable_type + " for " + stat_type);
+					target_choice = "Ask for " + consumable_type;
+				}
+			}
 		
 		
 		
 		
-		buffer choice_2_result = choice_2_text.run_choice_by_text(target_choice);
+			page_text = page_text.run_choice_by_text(target_choice);
+			if (page_text.length() == 0)
+			{
+				print("Unable to run choice " + target_choice + ", stopping.", "red");
+				break;
+			}
 		
-		house_text = choice_2_result;
-		if (__setting_one_house_only) break;
+			if (__setting_one_house_only) break;
+		}
+		else
+		{
+			print("Currently in an unknown place, stopping.", "red");
+			break;
+		}
 	}
 }
 
@@ -447,7 +513,8 @@ void main(string arguments)
 	pickSpirit();
 	prepareForSpiritFirst();
 	runHouses();
-	visit_url("main.php"); //not in a choice adventure
+	if (!mafiaIsPastRevision(20573))
+		visit_url("main.php"); //not in a choice adventure
 	ae.RestoreArchivedEquipment();
 	
 	
