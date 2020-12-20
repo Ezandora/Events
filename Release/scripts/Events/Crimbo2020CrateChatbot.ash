@@ -3,6 +3,11 @@
 int getSecondsSinceLastCombatStarted()
 {
 	//format: 20201220013603
+	
+	if (get_property("_lastCombatStarted") == "")
+	{
+		return 24 * 60 * 60;
+	}
 	string in_format = "yyyyMMddkkmmssZ";
 	string out_format = "";
 	//string new_format = format_date_time(in_format, get_property("_lastCombatStarted"), out_format);
