@@ -58,7 +58,7 @@ void RestoreArchivedEquipment()
 }
 
 
-string __farm_spirit_version = "1.1";
+string __farm_spirit_version = "1.1.1";
 
 boolean __setting_disable_automatics = false;
 boolean __setting_one_house_only = false;
@@ -492,7 +492,9 @@ void main(string arguments)
 	//Collect daily:
 	visit_url("place.php?whichplace=crimbo20&action=c20_factory");
 	
-	//maybe visit the secrets, maybe not?
+	//visit the secrets, because they are missable
+	int secret_id = gameday_to_int() + 1;
+	visit_url("place.php?whichplace=crimbo20&action=c20_secret" + secret_id);
 	//place.php?whichplace=crimbo20&action=c20_secret1
 	//place.php?whichplace=crimbo20&action=c20_secret2
 	
