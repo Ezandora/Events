@@ -58,10 +58,11 @@ void RestoreArchivedEquipment()
 }
 
 
-string __farm_spirit_version = "1.1.1";
+string __farm_spirit_version = "1.1.2";
 
 boolean __setting_disable_automatics = false;
 boolean __setting_one_house_only = false;
+boolean __setting_enable_balance = false;
 int __chosen_spirit = -1;
 
 int SPIRIT_RANDOM = 1;
@@ -179,30 +180,37 @@ void pickSpirit()
 {
 	if (__chosen_spirit == -1)
 	{
-		buffer page_text = visit_url("place.php?whichplace=crimbo20&action=c20_abuela");
-		//to_int(buffer) silently returns zero, have to convert to string first:
-		int cheer_levels = page_text.group_string("<b>Cheer</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
-		int carols_levels = page_text.group_string("<b>Carols</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
-		int commerce_levels = page_text.group_string("<b>Commerce</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
-		
-		print_html("Global Cheer: " + cheer_levels + ", Carols: " + carols_levels + ", Commerce: " + commerce_levels + ", going with the least popular.");
-		
-		
-		if (cheer_levels < carols_levels && cheer_levels < commerce_levels)
+		if (__setting_enable_balance)
 		{
-			__chosen_spirit = SPIRIT_CHEER;
-		}
-		else if (carols_levels < cheer_levels && carols_levels < commerce_levels)
-		{
-			__chosen_spirit = SPIRIT_CAROLS;
-		}
-		else if (commerce_levels < cheer_levels &&  commerce_levels < carols_levels)
-		{
-			__chosen_spirit = SPIRIT_COMMERCE;
+			buffer page_text = visit_url("place.php?whichplace=crimbo20&action=c20_abuela");
+			//to_int(buffer) silently returns zero, have to convert to string first:
+			int cheer_levels = page_text.group_string("<b>Cheer</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
+			int carols_levels = page_text.group_string("<b>Carols</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
+			int commerce_levels = page_text.group_string("<b>Commerce</b></td><td>([0123456789,]*)</td>")[0][1].replace_string(",", "").to_string().to_int();
+		
+			print_html("Global Cheer: " + cheer_levels + ", Carols: " + carols_levels + ", Commerce: " + commerce_levels + ", going with the least popular.");
+		
+		
+			if (cheer_levels < carols_levels && cheer_levels < commerce_levels)
+			{
+				__chosen_spirit = SPIRIT_CHEER;
+			}
+			else if (carols_levels < cheer_levels && carols_levels < commerce_levels)
+			{
+				__chosen_spirit = SPIRIT_CAROLS;
+			}
+			else if (commerce_levels < cheer_levels &&  commerce_levels < carols_levels)
+			{
+				__chosen_spirit = SPIRIT_COMMERCE;
+			}
+			else
+			{
+				__chosen_spirit = random(3) + 2;
+			}
 		}
 		else
 		{
-			__chosen_spirit = random(3) + 1;
+			__chosen_spirit = random(3) + 2;
 		}
 	}
 	
@@ -285,6 +293,21 @@ void prepareForSpiritFirst()
 			}
 		}
 	}
+	//Crimbo smile
+	//Book of Old-Timey Carols
+	//SalesCo sample kit
+	if (__chosen_spirit == SPIRIT_CHEER && to_item("Crimbo smile").available_amount() > 0 && to_item("Crimbo smile") != $item[none])
+	{
+		maximisation_extras += " +equip Crimbo smile";
+	}
+	else if (__chosen_spirit == SPIRIT_CAROLS && to_item("Book of Old-Timey Carols").available_amount() > 0 && to_item("Book of Old-Timey Carols") != $item[none])
+	{
+		maximisation_extras += " +equip Book of Old-Timey Carols";
+	}
+	else if (__chosen_spirit == SPIRIT_COMMERCE && to_item("SalesCo sample kit").available_amount() > 0 && to_item("SalesCo sample kit") != $item[none])
+	{
+		maximisation_extras += " +equip SalesCo sample kit";
+	}
 	cli_execute("maximize " + getCurrentLargestStatRatio() + maximisation_extras + " -tie");
 	
 	
@@ -302,6 +325,9 @@ void prepareForSpirit(int houses_left)
 	//string gain_command = "gain 10000000 muscle 10000000 moxie 10000000 mysticality 3 eff " + houses_left + " turns";
 	
 	//Just increase the largest stat ratio:
+	
+	if (__setting_one_house_only)
+		houses_left = 1;
 	string gain_command = "gain 10000000 " + getCurrentLargestStatRatio() + " 3 eff " + (houses_left + 1) + " turns silent limited";
 	boolean success = cli_execute(gain_command);
 }
@@ -456,6 +482,11 @@ boolean parseArguments(string arguments)
 			print_html("Random spirit chosen.");
 			__chosen_spirit = SPIRIT_RANDOM;
 		}
+		else if (word == "balance")
+		{
+			print_html("Balance voting chosen.");
+			__setting_enable_balance = true;
+		}
 		else if (word == "manual" || word == "nobuff")
 		{
 			print_html("Disabling buffing.");
@@ -476,6 +507,7 @@ boolean parseArguments(string arguments)
 			print_html("<b>cheer</b> - spread cheer (potential reward: food-giving item)");
 			print_html("<b>carol</b> - spread carols (potential reward: drinks-giving item)");
 			print_html("<b>commerce</b> - spread commerce (potential reward: candy-giving item)");
+			print_html("<b>balance</b> - votes for the losing candidate, like previous versions of this script.");
 			print_html("<b>manual</b>/<b>nobuff</b> - Disables the script changing equipment and buffing for effects.");
 			print_html("<b>once</b> - One house only. (testing purposes)");
 			return true;
