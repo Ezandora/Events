@@ -58,7 +58,7 @@ void RestoreArchivedEquipment()
 }
 
 
-string __farm_spirit_version = "1.1.2";
+string __farm_spirit_version = "1.1.3";
 
 boolean __setting_disable_automatics = false;
 boolean __setting_one_house_only = false;
@@ -99,18 +99,26 @@ stat getCurrentLargestStat()
 	return current_largest_stat;
 }
 
-stat getCurrentLargestStatRatio()
+stat getCurrentLargestStatRatio(boolean prefer_hundred_minimum)
 {
 	stat best_stat_for_rewards = $stat[none];
 	float best_stat_ratio = 0.0;
+	int best_stat_base_value = 0.0;
 	
 	foreach s in $stats[muscle, mysticality, moxie]
 	{
-		float ratio = s.my_buffedstat().to_float() / MAX(100.0, s.my_active_basestat().to_float());
-		if (ratio > best_stat_ratio || best_stat_for_rewards == $stat[none])
+		int base_stat = s.my_active_basestat();
+		float ratio = s.my_buffedstat().to_float() / MAX(100.0, base_stat.to_float());
+		
+		
+		if (prefer_hundred_minimum && base_stat < 100 && best_stat_base_value >= 100 && best_stat_ratio / MAX(0.001, ratio) < 2.0)
+			continue;
+		
+		if (ratio > best_stat_ratio || best_stat_for_rewards == $stat[none] || (prefer_hundred_minimum && best_stat_base_value < 100 && base_stat >= 100))
 		{
 			best_stat_for_rewards = s;
 			best_stat_ratio = ratio;
+			best_stat_base_value = base_stat;
 		}
 	}
 	return best_stat_for_rewards;
@@ -308,7 +316,7 @@ void prepareForSpiritFirst()
 	{
 		maximisation_extras += " +equip SalesCo sample kit";
 	}
-	cli_execute("maximize " + getCurrentLargestStatRatio() + maximisation_extras + " -tie");
+	cli_execute("maximize " + getCurrentLargestStatRatio(true) + maximisation_extras + " -tie");
 	
 	
 }
@@ -328,7 +336,7 @@ void prepareForSpirit(int houses_left)
 	
 	if (__setting_one_house_only)
 		houses_left = 1;
-	string gain_command = "gain 10000000 " + getCurrentLargestStatRatio() + " 3 eff " + (houses_left + 1) + " turns silent limited";
+	string gain_command = "gain 10000000 " + getCurrentLargestStatRatio(false) + " 3 eff " + (houses_left + 1) + " turns silent limited";
 	boolean success = cli_execute(gain_command);
 }
 
@@ -419,7 +427,7 @@ void runHouses()
 			string target_choice = choice_2_choices[random(choice_2_choices.count())];
 		
 			//stat current_largest_stat = getCurrentLargestStat();
-			stat best_stat_for_rewards = getCurrentLargestStatRatio();
+			stat best_stat_for_rewards = getCurrentLargestStatRatio(false);
 
 			foreach key in choice_2_matches
 			{

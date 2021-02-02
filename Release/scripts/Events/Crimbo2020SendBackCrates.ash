@@ -103,6 +103,7 @@ boolean stringHasAllSubstrings(string v, string [int] substrings)
 
 void main()
 {
+	if (true) return; //Script is no longer necessary.
 	loadProcessedKMails();
 	KMail [int] kmails = KMailGetAllKMails();
 	

@@ -25,6 +25,12 @@ void main(string sender, string message, string channel)
 {
 	if (message.contains_text("New message received") && channel == "Events" && !message.contains_text("The New-You Club") && !message.contains_text("The Loathing Postal Service") && getSecondsSinceLastCombatStarted() >= 60)
 	{
+		if (get_property("chatbotScript") == "Crimbo2020CrateChatbot.ash")
+		{
+			print("Automatically uninstalling Crimbo2020CrateChatbot script.");
+			set_property("chatbotScript", "");
+			return;
+		}
 		cli_execute("call Crimbo2020SendBackCrates.ash");
 	}
 }
