@@ -1,1 +1,1 @@
-https://github.com/Ezandora/Gain/branches/Release/
+https://github.com/Ezandora/Gain.git
